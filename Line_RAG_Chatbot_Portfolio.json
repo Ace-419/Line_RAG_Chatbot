@@ -1,0 +1,1152 @@
+{
+  "name": "Line RAG Chatbot (Gemini)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatbot-webhook",
+        "options": {}
+      },
+      "name": "LINE Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -1840,
+        1040
+      ],
+      "id": "17a82b9f-0f3a-402c-b1c5-a40e2398bed6",
+      "typeVersion": 2.1,
+      "webhookId": "43892f70-dd4d-414b-b817-d31d7a0ca2e5"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Message Parsing =====\n// Support LINE Webhook (events[0]) or general Webhook structure\nconst event = $input.first().json.body.events?.[0] || $json;\nconst message = event.message || {};\nconst replyToken = event.replyToken || '';\nconst userId = event.source?.userId || '';\nconst messageType = message.type || 'text';\nconst messageId = message.id || '';\n\nlet userText = '';\nlet hasImage = false;\nlet hasFile = false;\nlet imageId = '';\nlet fileName = '';\n\nif (messageType === 'text') {\n  userText = (message.text || '').trim();\n  hasImage = false;\n} else if (messageType === 'image') {\n  hasImage = true;\n  imageId = messageId;\n  userText = '[User uploaded an image, please analyze it and answer]';\n} else if (messageType === 'file') {\n  hasFile = true;\n  imageId = messageId;\n  fileName = message.fileName || '';\n  userText = '[User uploaded a file]';\n}\n\n// Check for admin command (upload file)\nconst isUploadCmd = (userText.startsWith('/upload')) ? true : false;\n\n// Check for history command\nconst isHistoryCmd = (userText.startsWith('/history')) ? true : false;\n\n// Check for help command\nconst isHelpCmd = (userText === '/help') ? true : false;\n\nreturn {\n  replyToken,\n  userId,\n  messageType,\n  messageId,\n  userText,\n  hasImage,\n  imageId,\n  hasFile,\n  fileName,\n  isUploadCmd,\n  isHistoryCmd,\n  isHelpCmd\n};"
+      },
+      "id": "9e945326-b40b-4266-a7b7-085a14b45357",
+      "name": "Parse Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1616,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($json.isHelpCmd === true) }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "rightValue": "",
+                    "id": "579438c8-1cb0-4463-b5c4-08386fc8d29b"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($json.isHistoryCmd === true) }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "rightValue": "",
+                    "id": "8210b90b-ebc1-4acb-8006-8cc8d0ff433b"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($json.isUploadCmd === true) }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "rightValue": "",
+                    "id": "1e7be266-011b-4388-b972-79af727535a6"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($json.hasFile === true) }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "rightValue": "",
+                    "id": "c299c11f-0d6e-46f0-ae58-5cc41cbb205a"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($json.hasImage === true) }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "rightValue": "",
+                    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "7027dc98-88d3-4895-a612-8f6b8c27bf5d",
+                    "leftValue": "",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "064d651a-9245-4439-aeda-0759de6328b0",
+      "name": "Message Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -1392,
+        976
+      ],
+      "notes": "Output 0: Help Menu\nOutput 1: History Query\nOutput 2: File Upload (hasFile)\nOutput 3: Image Analysis (hasImage)\nOutput 4: Upload Command (isUploadCmd)\nOutput 5: General Q&A (fallthrough)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Help Menu =====\nconst helpText = `🤖 AI Knowledge Chatbot User Guide\n\n📚 【Knowledge Base Query】\nEnter your question directly, e.g.:\n  \"What is PLC error 105?\"\n  \"Hydraulic press maintenance SOP\"\n\n🖼️ 【Image Analysis】\nUpload a photo of components/equipment and ask a question.\n\n📋 【Chat History】\n  /history <keyword>\n  Example: /history error 105\n\n📂 【File Upload】\n  /upload\n\n━━━━━━━━━━\n💡 Quick Commands:\n/help - Show this guide\n/history - Query history\n/upload - Manage file upload\n━━━━━━━━━━\n🟢 Support: Please contact the admin.`;\n\nreturn { text: helpText, replyToken: $('Parse Message').first().json.replyToken };"
+      },
+      "id": "feed7fdf-fc5b-4105-b708-8bc140c1a598",
+      "name": "Help Menu",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Parse History Query Keyword =====\nconst parsed = $('Parse Message').first().json;\nconst raw = parsed.userText.replace(/^\\/history/i, '').trim();\nconst keyword = raw || '';\nreturn {\n  keyword,\n  replyToken: parsed.replyToken,\n  userId: parsed.userId\n};"
+      },
+      "id": "3f9d08f6-d6c9-4af2-a8a2-109e3a1ba28f",
+      "name": "Parse History Keywords",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM chat_history WHERE user_id = '{{ $json.userId }}' ORDER BY created_at DESC LIMIT 5",
+        "options": {}
+      },
+      "id": "36b5581e-a477-4177-95ed-cc1582e7d1e1",
+      "name": "Get Chat History",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        208,
+        768
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Filter History and Format Output =====\nconst keyword = $('Parse History Keywords').first().json.keyword.toLowerCase();\nconst replyToken = $('Parse History Keywords').first().json.replyToken;\n\n// Postgres results\nlet matched = items.map(i => i.json);\n\nif (keyword) {\n  matched = matched.filter(r => {\n    const q = (r.user_text || '').toLowerCase();\n    const a = (r.ai_reply || '').toLowerCase();\n    return q.includes(keyword) || a.includes(keyword);\n  });\n}\n\nlet resultText = `📋 History Query${keyword ? ` (Keyword: ${keyword})` : ' (Recent 5 records)'}\\n${'─'.repeat(20)}`;\n\nif (matched.length === 0) {\n  resultText += '\\n\\n❌ No records found.';\n} else {\n  matched.forEach((r, idx) => {\n    const timeStr = r.created_at ? new Date(r.created_at).toLocaleString('en-US') : '';\n    resultText += `\\n\\n【${idx + 1}】${timeStr}`;\n    resultText += `\\n❓ ${r.user_text || ''}`.substring(0, 100);\n    resultText += `\\n💡 ${r.ai_reply || ''}`.substring(0, 150);\n    if (r.source_documents) resultText += `\\n📄 Source: ${r.source_documents}`;\n  });\n}\n\nreturn { text: resultText, replyToken };"
+      },
+      "id": "748d8b65-e48e-45ca-b42b-c37645b6f52a",
+      "name": "Format History Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"replyToken\":\"{{ $json.replyToken }}\",\n    \"messages\":[\n        {\n            \"type\":\"text\",\n            \"text\":  {{ JSON.stringify($json.text) }}\n        }\n    ]\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        768,
+        1360
+      ],
+      "id": "7d0537cd-6e10-46ed-84ca-a5abd42f7c94",
+      "name": "Send LINE Reply",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO user_sessions (user_id, status) VALUES ($1, 'WAITING_FOR_FILE') ON CONFLICT (user_id) DO UPDATE SET status = 'WAITING_FOR_FILE', updated_at = NOW()",
+        "options": {
+          "queryReplacement": "={{ $('Parse Message').first().json.userId }}"
+        }
+      },
+      "id": "a95e2c78-5574-44e8-8a7a-be33d0c18746",
+      "name": "Enter Upload Mode",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        208,
+        960
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT status FROM user_sessions WHERE user_id = $1",
+        "options": {
+          "queryReplacement": "={{ $('Parse Message').first().json.userId }}"
+        }
+      },
+      "id": "fd10ef01-0bb7-41c0-b729-e46232ab6a9c",
+      "name": "Check Upload Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        -768,
+        1152
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json[\"status\"] }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              },
+              "rightValue": "WAITING_FOR_FILE",
+              "id": "check-waiting-state"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d687e53d-3ef7-4145-a728-0f3177d8d980",
+      "name": "Is Expecting File?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api-data.line.me/v2/bot/message/{{ $('Parse Message').first().json.imageId }}/content",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "259bfea3-e78a-47f7-b9d7-1de7c66df787",
+      "name": "Download LINE File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -336,
+        1136
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE user_sessions SET status = 'IDLE' WHERE user_id = $1",
+        "options": {
+          "queryReplacement": "={{ $('Parse Message').first().json.userId }}"
+        }
+      },
+      "id": "c04494cc-5f4c-4b2d-aeb9-06b09b9588d2",
+      "name": "Reset Upload Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        208,
+        1136
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "return { \n  text: \"✅ You have entered upload mode. Please send the _knowledge.json file converted by Python.\", \n  replyToken: $(\"Parse Message\").first().json.replyToken \n};"
+      },
+      "id": "c026f357-9c0a-4b9d-bc99-d93b229c384f",
+      "name": "Wait for Upload Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return { \n  text: \"❌ Please enter /upload to enable upload mode first.\", \n  replyToken: $(\"Parse Message\").first().json.replyToken \n};"
+      },
+      "id": "329fa3a7-9f15-4faf-a8ec-69d2875038af",
+      "name": "Permission Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fileName = $(\"Parse Message\").first().json.fileName || \"Unknown file\";\nreturn { \n  text: `✅ File [${fileName}] has been successfully parsed and added to the knowledge base!`, \n  replyToken: $(\"Parse Message\").first().json.replyToken \n};"
+      },
+      "id": "7dea9cb0-43db-479f-95db-7f2c93d52c8f",
+      "name": "Upload Success Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst binaryData = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst jsonString = binaryData.toString('utf-8');\nconst items = JSON.parse(jsonString);\n\nreturn items.map(item => {\n  return {\n    json: {\n      content: item.content,\n      document_name: item.document_name,\n      embedding: '[' + item.embedding.join(',') + ']'\n    }\n  };\n});\n"
+      },
+      "id": "b8c1a1ad-5259-4217-9e6a-25cd424e4024",
+      "name": "Read Offline Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO knowledge_base (document_name, content, embedding) VALUES ($1, $2, $3)",
+        "options": {
+          "queryReplacement": "={{ [$json.document_name, $json.content, $json.embedding] }}"
+        }
+      },
+      "id": "d52288e0-ec0d-4dbd-8f8f-ad2577be9594",
+      "name": "Save to Vector DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        32,
+        1136
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO user_sessions (user_id, status) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET status = $2, updated_at = NOW()",
+        "options": {
+          "queryReplacement": "={{ [$('Parse Message').first().json.userId, 'WAIT_DESC:' + $('Parse Message').first().json.imageId] }}"
+        }
+      },
+      "id": "62ba3cd6-4c81-4e61-ae6e-e4f26634f8a8",
+      "name": "Save Image State",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        -480,
+        1552
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "return { \n  text: \"Please describe the image or ask a question about it.\", \n  replyToken: $(\"Parse Message\").first().json.replyToken \n};"
+      },
+      "id": "c2bc5cd8-78fc-4632-89ab-d3a73f08afaf",
+      "name": "Request Image Description",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1552
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api-data.line.me/v2/bot/message/{{ $node[\"Extract Image ID\"].json.imageId || $('Parse Message').first().json.imageId }}/content",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "18ae2e21-a62c-40aa-92af-6c61753d14e0",
+      "name": "Download LINE Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -272,
+        1776
+      ],
+      "credentials": {},
+      "notes": "Use HTTP Header Auth with Authorization: Bearer [YOUR_LINE_CHANNEL_ACCESS_TOKEN]"
+    },
+    {
+      "parameters": {
+        "jsCode": "const binaryData = await this.helpers.getBinaryDataBuffer(0, 'data');\nreturn { \n  base64: binaryData.toString('base64'),\n  userText: $node[\"Extract Image ID\"].json.userText || $(\"Parse Message\").first().json.userText\n};"
+      },
+      "id": "3417d142-c17a-4502-ba93-403978e97a8c",
+      "name": "Image to Base64",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        1776
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=PASTE_YOUR_GEMINI_API_KEY_HERE",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \n{\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": `${$json.userText}`\n        },\n        {\n          \"inline_data\": {\n            \"mime_type\": \"image/png\",\n            \"data\": `${$json.base64}`\n          }\n        }\n      ]\n    }\n  ]\n}\n}}",
+        "options": {}
+      },
+      "id": "527a28d5-faf0-4d22-8706-77f2e6b1a7ae",
+      "name": "Gemini Image Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        176,
+        1776
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Compose AI Response and Save to History =====\nconst aiRaw = $json.candidates?.[0]?.content?.parts?.[0]?.text || $json.response || $json.content || $json.text || '(No AI response)';\nconst ctx = $('Format RAG Context').first().json;\nconst replyToken = $('Parse Message').first().json.replyToken;\nconst userId = $('Parse Message').first().json.userId;\nconst userQuestion = ctx.userQuestion;\nconst sourceNames = ctx.sourceNames;\n\nconst responseText = `🤖 AI Response\\n${'─'.repeat(20)}\\n${aiRaw}\\n\\n📄 Sources: ${sourceNames}`;\n\n// Prepare for history log\nconst now = new Date().toLocaleString('en-US');\n\nreturn {\n  text: responseText,\n  replyToken,\n  // History fields\n  timestamp: now,\n  userId,\n  question: userQuestion,\n  ai_reply: aiRaw.substring(0, 500),\n  sources: sourceNames\n};"
+      },
+      "id": "0645f35d-dc03-4780-bcc1-b225856722ed",
+      "name": "Compose AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO chat_history (user_id, user_text, ai_reply, source_documents) VALUES ($1, $2, $3, $4)",
+        "options": {
+          "queryReplacement": "={{ [$json.userId, $json.question, $json.ai_reply, $json.sources] }}"
+        }
+      },
+      "id": "9fdc382a-c682-4225-b753-9e61f6e10fb5",
+      "name": "Save to History",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        864,
+        2016
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=PASTE_YOUR_GEMINI_API_KEY_HERE",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": {\n    \"parts\": [\n      {\n        \"text\": \"={{ $json.userText || $('Parse Message').first().json.userText || 'What does this mean?' }}\"\n      }\n    ]\n  },\n  \"output_dimensionality\": 768\n}\n",
+        "options": {}
+      },
+      "id": "6de1043e-cc45-49b6-910e-d2cae3271c04",
+      "name": "Gemini Generate Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -496,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Compose Knowledge Context =====\nconst docs = items.map(i => i.json);\n\n// Detect if coming from image analysis path\nlet imageAnalysis = null;\ntry { imageAnalysis = $('Gemini Image Analysis').first().json.candidates[0].content.parts[0].text || null; } catch(e) {}\n\nconst baseQuestion = $('Parse Message').first().json.userText;\nconst userQuestion = imageAnalysis\n  ? `[Image Recognition]\\n${imageAnalysis}\\n\\n[User Message] ${baseQuestion}`\n  : baseQuestion;\n\nlet contextText = \"\";\nlet sources = [];\nif (docs.length > 0) {\n    contextText = docs.map(d => `【Document: ${d.document_name}】\\nContent: ${d.content}`).join('\\n\\n');\n    sources = [...new Set(docs.map(d => d.document_name))];\n} else {\n    contextText = \"No relevant knowledge base data found.\";\n}\n\nreturn {\n    userQuestion,\n    contextText,\n    sourceNames: sources.join(', ') || 'None'\n};"
+      },
+      "id": "2ed4bedf-c63d-4145-bc96-f03b88bd66b5",
+      "name": "Format RAG Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=PASTE_YOUR_GEMINI_API_KEY_HERE",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \n{\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": `Please answer the user's question directly based on the \"Reference Materials\". The answer should be concise, professional, and focus on technical details or SOPs.\n\n⚠️ Instructions:\n1. Get straight to the point, do not have long openings (e.g., Hello, I understand your question) or closings.\n2. If there are troubleshooting steps, SOPs, or technical parameters in the data, be sure to list them completely.\n3. Answer in English with a professional technical tone.\n4. If the reference material is insufficient to answer, please state so directly and provide relevant suggestions from the existing data.\n\n───── Reference Materials ─────\n${$json.contextText}\n\n───── User Question ─────\n${$json.userQuestion}`\n        }\n      ]\n    }\n  ]\n}\n}}",
+        "options": {}
+      },
+      "id": "ee40d8f7-e6d4-41d5-98e7-e86ba8c01ce0",
+      "name": "Gemini RAG Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        2016
+      ],
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT content, document_name FROM knowledge_base ORDER BY embedding <-> '[{{ $json.embedding.values.join(\",\") }}]' LIMIT 5;",
+        "options": {}
+      },
+      "id": "3edcb15e-aa0e-48d5-ba5f-9636b9a313b3",
+      "name": "Vector Search (Postgres)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        -256,
+        2016
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=PASTE_YOUR_GEMINI_API_KEY_HERE",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \n{\n  \"content\": {\n    \"parts\": [\n      {\n        \"text\": `${$json.candidates[0].content.parts[0].text}`\n      }\n    ]\n  }\n}\n}}",
+        "options": {}
+      },
+      "id": "dabc5f7a-54e7-4edb-a1e3-51a0be484a1e",
+      "name": "Gemini Generate Embedding (Image)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        1776
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT status FROM user_sessions WHERE user_id = $1",
+        "options": {
+          "queryReplacement": "={{ $('Parse Message').first().json.userId }}"
+        }
+      },
+      "id": "42f4e848-5749-4b05-9f27-684a124adeca",
+      "name": "Check if Waiting for Description",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        -1040,
+        1840
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith",
+                "name": "filter.operator.startsWith"
+              },
+              "rightValue": "WAIT_DESC:",
+              "id": "is-desc-waiting"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "22c518cd-8ed4-4b19-953d-ea80cb15836d",
+      "name": "Is Description Submission?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        1840
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const status = $json.status;\nconst imageId = status.split(':')[1];\nreturn {\n  imageId,\n  userText: $(\"Parse Message\").first().json.userText\n};"
+      },
+      "id": "0d7b103c-7b66-45c2-8ab5-2d9acc92e632",
+      "name": "Extract Image ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        1776
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE user_sessions SET status = 'IDLE' WHERE user_id = $1",
+        "options": {
+          "queryReplacement": "={{ $('Parse Message').first().json.userId }}"
+        }
+      },
+      "id": "13587b53-7d79-4144-bd32-fef0f1541166",
+      "name": "Reset Description Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        -496,
+        1776
+      ],
+      "credentials": {}
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "LINE Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Message": {
+      "main": [
+        [
+          {
+            "node": "Message Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message Router": {
+      "main": [
+        [
+          {
+            "node": "Help Menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse History Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enter Upload Mode",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Upload Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Image State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check if Waiting for Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Help Menu": {
+      "main": [
+        [
+          {
+            "node": "Send LINE Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse History Keywords": {
+      "main": [
+        [
+          {
+            "node": "Get Chat History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chat History": {
+      "main": [
+        [
+          {
+            "node": "Format History Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format History Result": {
+      "main": [
+        [
+          {
+            "node": "Send LINE Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enter Upload Mode": {
+      "main": [
+        [
+          {
+            "node": "Wait for Upload Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Upload Status": {
+      "main": [
+        [
+          {
+            "node": "Is Expecting File?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Expecting File?": {
+      "main": [
+        [
+          {
+            "node": "Download LINE File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Permission Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download LINE File": {
+      "main": [
+        [
+          {
+            "node": "Read Offline Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset Upload Status": {
+      "main": [
+        [
+          {
+            "node": "Upload Success Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Upload Response": {
+      "main": [
+        [
+          {
+            "node": "Send LINE Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Permission Error Response": {
+      "main": [
+        [
+          {
+            "node": "Send LINE Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Success Notification": {
+      "main": [
+        [
+          {
+            "node": "Send LINE Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Offline Data": {
+      "main": [
+        [
+          {
+            "node": "Save to Vector DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Vector DB": {
+      "main": [
+        [
+          {
+            "node": "Reset Upload Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Image State": {
+      "main": [
+        [
+          {
+            "node": "Request Image Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Image Description": {
+      "main": [
+        [
+          {
+            "node": "Send LINE Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download LINE Image": {
+      "main": [
+        [
+          {
+            "node": "Image to Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Image Analysis": {
+      "main": [
+        [
+          {
+            "node": "Gemini Generate Embedding (Image)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose AI Response": {
+      "main": [
+        [
+          {
+            "node": "Save to History",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send LINE Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Generate Embedding": {
+      "main": [
+        [
+          {
+            "node": "Vector Search (Postgres)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format RAG Context": {
+      "main": [
+        [
+          {
+            "node": "Gemini RAG Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini RAG Chat": {
+      "main": [
+        [
+          {
+            "node": "Compose AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Search (Postgres)": {
+      "main": [
+        [
+          {
+            "node": "Format RAG Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Generate Embedding (Image)": {
+      "main": [
+        [
+          {
+            "node": "Vector Search (Postgres)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Waiting for Description": {
+      "main": [
+        [
+          {
+            "node": "Is Description Submission?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Description Submission?": {
+      "main": [
+        [
+          {
+            "node": "Extract Image ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gemini Generate Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Image ID": {
+      "main": [
+        [
+          {
+            "node": "Reset Description Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset Description Status": {
+      "main": [
+        [
+          {
+            "node": "Download LINE Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image to Base64": {
+      "main": [
+        [
+          {
+            "node": "Gemini Image Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "40224d20-206c-4f8f-9f5c-3c94cb596a36",
+  "meta": {
+    "instanceId": "607b1ed2813296a494d3e4b000472180b478eba66df699eb424e3b9360eda92d"
+  },
+  "id": "ZslNvXPXTZFLuZ56",
+  "tags": []
+}
